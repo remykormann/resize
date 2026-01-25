@@ -18,6 +18,7 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\attribute\Attribute;
 use pocketmine\entity\EntityDataHelper;
 use pocketmine\entity\Skin;
+use pocketmine\item\VanillaItems;
 
 class Main extends PluginBase{
 
@@ -100,11 +101,13 @@ class Main extends PluginBase{
             $this->players[$cloneName] = $player;
 
             $posX = $clone->getPosition()->x;
-            $posY = $clone->getEyePos()->y - $player->getEyeHeight();
+            $posY = $clone->getEyePos()->y - $player->getSize()->getHeight();
             $posZ = $clone->getPosition()->z;
 
             $player->setHasBlockCollision(false);
+            $clone->getInventory()->setItemInHand(VanillaItems::DIAMOND_SWORD());
             $player->setInvisible(true);
+            $this->setArmorAndItemClone($clone, $player);
             $player->teleport(new Vector3($posX, $posY, $posZ));
     }
 
@@ -120,5 +123,14 @@ class Main extends PluginBase{
 
             $player->setHasBlockCollision(true);
             $player->setInvisible(false);
+    }
+
+    public function setArmorAndItemClone(CloneEntity $clone, Player $player): void {
+        // This method can be implemented to sync armor and items between the player and the clone
+        $clone->getArmorInventory()->setItem(0, $player->getArmorInventory()->getItem(0)); // helmet
+        $clone->getArmorInventory()->setItem(1, $player->getArmorInventory()->getItem(1)); // chestplate
+        $clone->getArmorInventory()->setItem(2, $player->getArmorInventory()->getItem(2)); // leggings
+        $clone->getArmorInventory()->setItem(3, $player->getArmorInventory()->getItem(3)); // boots
+        $clone->getInventory()->setItemInHand($player->getInventory()->getItemInHand());
     }
 }

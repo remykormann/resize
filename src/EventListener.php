@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace mysonied\resize;
 
 use pocketmine\event\Listener;
-use pocketmine\event\entity\EntityMotionEvent;
+use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\PlayerAuthInputPacket;
 use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\player\PlayerMissSwingEvent;
+use pocketmine\network\mcpe\protocol\AnimatePacket;
+use pocketmine\event\player\PlayerItemHeldEvent;
+use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\event\inventory\InventoryTransactionEvent;
 
 class EventListener implements Listener {
     private Main $plugin;
@@ -19,15 +25,82 @@ class EventListener implements Listener {
         $this->plugin = $plugin;
     }
 
+    public function onPlayerJoin(PlayerJoinEvent $event): void {
+        $player = $event->getPlayer();
+    }
+
     public function onPlayerQuit(PlayerQuitEvent $event): void {
         $player = $event->getPlayer();
         if(isset($this->plugin->clones[$player->getName()])) {
             $clone = $this->plugin->clones[$player->getName()];
+            $player->teleport($clone->getPosition());
             $clone->close();
             unset($this->plugin->clones[$player->getName()]);
             unset($this->plugin->players[$clone->getNameTag()]);
-            $player->teleport($clone->getPosition());
         }
+    }
+
+    public function onDamage(EntityDamageByEntityEvent $event): void {
+        $entity = $event->getEntity();
+
+        $damager = $event->getDamager();
+
+        if($entity instanceof CloneEntity){
+            $event->cancel();
+            if(!isset($this->plugin->players[$entity->getNameTag()])) return;
+            $player = $this->plugin->players[$entity->getNameTag()];
+            
+            if($damager === $player) return;
+            
+            $player->attack($event->getFinalDamage(), $event->getDamager(), $event->getCause());
+            
+        
+        }
+    }
+
+    public function onPlayerMove(PlayerMoveEvent $event): void {
+        $player = $event->getPlayer();
+        if(isset($this->plugin->clones[$player->getName()]) === false){
+            return;
+        }
+        $clone = $this->plugin->clones[$player->getName()];
+
+        // Synchroniser la rotation du clone avec celle du joueur
+        $clone->setRotation($player->getLocation()->getYaw(), $player->getLocation()->getPitch());
+    }
+
+    public function onPlayerMissSwing(PlayerMissSwingEvent $event): void {
+        $player = $event->getPlayer();
+        if(isset($this->plugin->clones[$player->getName()]) === false){
+            return;
+        }
+        $clone = $this->plugin->clones[$player->getName()];
+
+        $pk = new AnimatePacket();
+        $pk->action = AnimatePacket::ACTION_SWING_ARM;
+        $pk->actorRuntimeId = $clone->getId();
+
+        $clone->getWorld()->broadcastPacketToViewers($clone->getPosition(), $pk);
+
+        $event->cancel();
+    }
+
+    public function onPlayerItemHeld(PlayerItemHeldEvent $event): void {
+        $player = $event->getPlayer();
+        if(isset($this->plugin->clones[$player->getName()]) === false){
+            return;
+        }
+        $clone = $this->plugin->clones[$player->getName()];
+        $clone->getInventory()->setItemInHand($event->getItem());
+    }
+
+    public function onInventoryChange(InventoryTransactionEvent $event): void {
+        $player = $event->getTransaction()->getSource();
+        if(isset($this->plugin->clones[$player->getName()]) === false){
+            return;
+        }
+        $clone = $this->plugin->clones[$player->getName()];
+        $this->plugin->setArmorAndItemClone($clone, $player);
     }
 
     
