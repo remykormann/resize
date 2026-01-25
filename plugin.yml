@@ -1,0 +1,17 @@
+---
+name: resize
+version: 0.0.1
+main: mysonied\resize\Main
+api: 5.39.2
+src-namespace-prefix: mysonied\resize
+
+commands:
+  resize:
+    description: resize the player
+    usage: "/resize <scale>"
+    permission: resize.command.resize
+permissions:
+  resize.command.resize:
+    description: "Allows the user to run the resize command"
+    default: true
+...
