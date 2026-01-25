@@ -19,13 +19,6 @@ class CloneEntity extends Human {
         $currentPos = $this->getPosition();
         $plugin = $this->getWorld()->getServer()->getPluginManager()->getPlugin("resize");
 
-        /*if ($this->lastPos !== null) {
-            if (!$currentPos->equals($this->lastPos)) {
-                // 👉 ici = "event entity move (physique)"
-                $this->onPhysicalMove($plugin, $this->lastPos, $currentPos);
-            }
-        }*/
-
         if(isset($plugin->players[$this->getNameTag()]) === false) return $hasUpdate;
         $player = $plugin->players[$this->getNameTag()];
         if ($this !== $plugin->clones[$player->getNameTag()]) return $hasUpdate;
@@ -54,22 +47,6 @@ class CloneEntity extends Human {
         $this->lastPos = $currentPos->asVector3();
 
         return $hasUpdate;
-    }
-
-    protected function onPhysicalMove(Main $plugin, Vector3 $from, Vector3 $to): void { 
-
-        $dy = $to->y - $from->y;
-
-        
-        /*if ($motion->y == 0 && $dy == 0) {
-            $posPlayer = $player->getPosition();
-            $diff = $posPlayer->y - ($this->getEyePos()->y - $player->getEyeHeight());
-            if($diff > 0.1 || $diff < -0.1){
-                //synchronisation y entre clone et joueur
-                $player->teleport(new Vector3($posPlayer->x, $this->getEyePos()->y - $player->getEyeHeight(), $posPlayer->z));
-            }
-        }*/
-
     }
 
 }

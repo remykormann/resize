@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace mysonied\resize;
 
 use pocketmine\event\Listener;
-use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\event\entity\EntityMotionEvent;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\PlayerAuthInputPacket;
 use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 use pocketmine\event\server\DataPacketReceiveEvent;
+use pocketmine\event\player\PlayerQuitEvent;
 
 class EventListener implements Listener {
     private Main $plugin;
@@ -19,27 +19,15 @@ class EventListener implements Listener {
         $this->plugin = $plugin;
     }
 
-    public function onPlayerMove(PlayerMoveEvent $event): void {
+    public function onPlayerQuit(PlayerQuitEvent $event): void {
         $player = $event->getPlayer();
-        if(isset($this->plugin->clones[$player->getName()]) === false){
-            return;
+        if(isset($this->plugin->clones[$player->getName()])) {
+            $clone = $this->plugin->clones[$player->getName()];
+            $clone->close();
+            unset($this->plugin->clones[$player->getName()]);
+            unset($this->plugin->players[$clone->getNameTag()]);
+            $player->teleport($clone->getPosition());
         }
-        $clone = $this->plugin->clones[$player->getName()];
-        $to = $event->getTo();
-        $from = $event->getFrom();
-
-        if($to->x === $from->x && $to->z === $from->z){
-            return;
-        }
-
-        //deplacement du clone en fonction du joueur sur x et z
-        /*$posX = $to->x;
-        $posY = $clone->getPosition()->y;
-        $posZ = $to->z;
-
-        $motion = $player->getMotion();
-
-        $clone->setMotion(new Vector3($motion->x, 0, $motion->z));*/
     }
 
     

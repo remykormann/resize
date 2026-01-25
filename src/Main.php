@@ -27,8 +27,6 @@ class Main extends PluginBase{
     //player of each clone
     public array $players = [];
 
-    public array $wantJump = [];
-
     public function onEnable() : void{
         EntityFactory::getInstance()->register(
             CloneEntity::class,
@@ -56,17 +54,34 @@ class Main extends PluginBase{
 			case "resize":
                 if(isset($args[0]) && is_numeric($args[0])){
                     $scale = (float)$args[0];
+                    if($scale < 0.1 || $scale > 4.0){
+                        $sender->sendMessage("Scale must be greater than 0.1 and less than 4.0");
+                        return true;
+                    }
                     // Call the resize method here
                     $this->resize($sender, $scale);
                     $sender->sendMessage("You have been resized to scale: " . $scale);
-                } else {
-                    $sender->sendMessage("Usage: /resize <scale>");
+                }
+                elseif (isset($args[0]) || $args[0] === "normal") {
+                    // Reset the player's size to normal
+                    $this->backToNormal($sender);
+                }
+                else {
+                    $sender->sendMessage("Invalid scale value. Please provide a numeric value.");
                 }
 				return true;
 		}
 	}
 
     public function resize(Player $player, float $scale) : void{
+            if(isset($this->clones[$player->getName()])){
+                $player->teleport($this->clones[$player->getName()]->getPosition());
+                $oldClone = $this->clones[$player->getName()];
+                $oldClone->close();
+                unset($this->clones[$player->getName()]);
+                unset($this->players[$oldClone->getNameTag()]);
+            }
+
             $location = $player->getLocation();
             $clone = new CloneEntity(
                 Location::fromObject($location, $player->getWorld()),
@@ -91,5 +106,19 @@ class Main extends PluginBase{
             $player->setHasBlockCollision(false);
             $player->setInvisible(true);
             $player->teleport(new Vector3($posX, $posY, $posZ));
+    }
+
+    public function backToNormal(Player $player) : void{
+            if(isset($this->clones[$player->getName()]) === false){
+                return;
+            }
+            $clone = $this->clones[$player->getName()];
+            $player->teleport($clone->getPosition());
+            $clone->close();
+            unset($this->clones[$player->getName()]);
+            unset($this->players[$clone->getNameTag()]);
+
+            $player->setHasBlockCollision(true);
+            $player->setInvisible(false);
     }
 }
