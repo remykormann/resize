@@ -57,10 +57,24 @@ class CloneEntity extends Human {
             $dirZ * $distance
         );
 
+        //return if there is a block at the position
+        $block = $this->getWorld()->getBlockAt(
+            (int)floor($targetPos->x),
+            (int)floor($targetPos->y),
+            (int)floor($targetPos->z)
+        );
+        if ($block->isSolid()) {
+            $targetPos = $headPos->add(
+                - $dirX * 0.2 * $distance,
+                0,
+                - $dirZ * 0.2 * $distance
+            );  
+        }
+
         // ==========
 
         $diffX = $player->getPosition()->x - $targetPos->x;
-        $diffY = $player->getPosition()->y - ($targetPos->y - $player->getSize()->getHeight());
+        $diffY = $player->getPosition()->y - ($targetPos->y - 1.62);
         $diffZ = $player->getPosition()->z - $targetPos->z;
 
         $motionX = 0;
@@ -71,7 +85,7 @@ class CloneEntity extends Human {
             $motionX = -$diffX * 0.7;
         }
         if ($diffY > 0.01 || $diffY < -0.01) {
-            $motionY = -$diffY * 0.7;
+            $motionY = -$diffY * 0.6;
         }
         if ($diffZ > 0.01 || $diffZ < -0.01) {
             $motionZ = -$diffZ * 0.7;

@@ -12,11 +12,13 @@ use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\player\PlayerMissSwingEvent;
 use pocketmine\network\mcpe\protocol\AnimatePacket;
 use pocketmine\event\player\PlayerItemHeldEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\inventory\InventoryTransactionEvent;
+use pocketmine\player\Player;
 
 class EventListener implements Listener {
     private Main $plugin;
@@ -40,21 +42,25 @@ class EventListener implements Listener {
         }
     }
 
-    public function onDamage(EntityDamageByEntityEvent $event): void {
+    public function onDamage(EntityDamageEvent $event): void {
         $entity = $event->getEntity();
-
-        $damager = $event->getDamager();
-
+        if($entity instanceof Player){
+            if(isset($this->plugin->clones[$entity->getName()]) === false){
+                return;
+            }
+            //annuler les degats si le joueur est dans un block
+            if(!isset($event->doApply)){
+                $event->cancel();
+                return;
+            }
+        }
         if($entity instanceof CloneEntity){
-            $event->cancel();
             if(!isset($this->plugin->players[$entity->getNameTag()])) return;
             $player = $this->plugin->players[$entity->getNameTag()];
-            
-            if($damager === $player) return;
-            
-            $player->attack($event->getFinalDamage(), $event->getDamager(), $event->getCause());
-            
-        
+            $damageEvent = new EntityDamageEvent($player, $event->getCause(), $event->getFinalDamage());
+            $damageEvent->doApply = true;
+            $player->attack($damageEvent);
+            $event->cancel();
         }
     }
 
@@ -103,6 +109,8 @@ class EventListener implements Listener {
         $this->plugin->setArmorAndItemClone($clone, $player);
     }
 
+
+
     
     public function onPacket(DataPacketReceiveEvent $event): void {
         $player = $event->getOrigin()->getPlayer();
@@ -128,8 +136,8 @@ class EventListener implements Listener {
                 }
             }
 
-            $jumpHeight = 0.52;;
-            $speed = 0.2;
+            $jumpHeight = 0.52;
+            $speed = 0.3;
 
             if(in_array(PlayerAuthInputFlags::JUMPING, $active) && $clone->isOnGround()){
                 // le joueur MONTE

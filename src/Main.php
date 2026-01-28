@@ -89,8 +89,7 @@ class Main extends PluginBase{
                 $player->getSkin()
             );
             if($clone === null) return;
-            $ratio = $scale;
-            $clone->setScale($ratio);
+            $clone->setScale($scale);
             $clone->teleport(new Vector3($player->getPosition()->x, $player->getPosition()->y, $player->getPosition()->z));
             $clone->setHasGravity(true);
             $clone->setNameTag($player->getNameTag());
@@ -101,12 +100,13 @@ class Main extends PluginBase{
             $this->players[$cloneName] = $player;
 
             $posX = $clone->getPosition()->x;
-            $posY = $clone->getEyePos()->y - $player->getSize()->getHeight();
+            $posY = $clone->getEyePos()->y - 1.62;
             $posZ = $clone->getPosition()->z;
 
             $player->setHasBlockCollision(false);
             $clone->getInventory()->setItemInHand(VanillaItems::DIAMOND_SWORD());
             $player->setInvisible(true);
+            $player->setScale(0.01);
             $this->setArmorAndItemClone($clone, $player);
             $player->teleport(new Vector3($posX, $posY, $posZ));
     }
@@ -123,6 +123,7 @@ class Main extends PluginBase{
 
             $player->setHasBlockCollision(true);
             $player->setInvisible(false);
+            $player->setScale(1.0);
     }
 
     public function setArmorAndItemClone(CloneEntity $clone, Player $player): void {
