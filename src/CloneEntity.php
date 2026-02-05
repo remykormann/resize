@@ -8,10 +8,16 @@ use pocketmine\event\entity\EntityEvent;
 use pocketmine\math\Vector3;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\world\World;
+use pocketmine\network\mcpe\protocol\types\BlockPosition;
+use pocketmine\network\mcpe\protocol\UpdateBlockPacket;
+use pocketmine\block\VanillaBlocks;
+
 
 class CloneEntity extends Human {
 
     private ?Vector3 $lastPos = null;
+
+    public float $customScale = 1.0;
 
     public function onUpdate(int $currentTick): bool {
         $hasUpdate = parent::onUpdate($currentTick);
@@ -27,7 +33,10 @@ class CloneEntity extends Human {
 
         $loc = $this->getLocation();
         $yaw = deg2rad($loc->getYaw());
-        $pitch = deg2rad($loc->getPitch());
+        $pitchDeg = $loc->getPitch();
+        $pitchDeg = max(-60, min(60, $pitchDeg));
+        $pitch = deg2rad($pitchDeg);
+
 
         $dirX = -cos($pitch) * sin($yaw);
         $dirY = -sin($pitch);
@@ -66,15 +75,38 @@ class CloneEntity extends Human {
         if ($block->isSolid()) {
             $targetPos = $headPos->add(
                 - $dirX * 0.2 * $distance,
-                0,
+                - $dirY * 0.2 * $distance,
                 - $dirZ * 0.2 * $distance
             );  
         }
 
+        /*if($player->getScale() < 0.5){
+            $blockEye = $player->getWorld()->getBlockAt(
+                (int)floor($player->getPosition()->x),
+                (int)floor($player->getPosition()->y + 1.62),
+                (int)floor($player->getPosition()->z)
+            );
+            if ($blockEye->isSolid()) {
+                $blockPos = new BlockPosition(
+                    (int)$player->getPosition()->x,
+                    (int)$player->getPosition()->y,
+                    (int)$player->getPosition()->z
+                );
+                $pk = UpdateBlockPacket::create(
+                    $blockPos,
+                    VanillaBlocks::BARRIER()->getStateId(),
+                    0,
+                    0
+                );
+
+                $player->getNetworkSession()->sendDataPacket($pk); 
+            }
+        }*/
+
         // ==========
 
         $diffX = $player->getPosition()->x - $targetPos->x;
-        $diffY = $player->getPosition()->y - ($targetPos->y - 1.62);
+        $diffY = $player->getPosition()->y + 1.62 - $targetPos->y;
         $diffZ = $player->getPosition()->z - $targetPos->z;
 
         $motionX = 0;
