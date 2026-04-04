@@ -19,6 +19,7 @@ use pocketmine\event\player\PlayerItemHeldEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\inventory\InventoryTransactionEvent;
 use pocketmine\player\Player;
+use pocketmine\event\player\PlayerToggleSwimEvent;
 
 class EventListener implements Listener {
     private Main $plugin;
@@ -39,6 +40,10 @@ class EventListener implements Listener {
             $clone->close();
             unset($this->plugin->clones[$player->getName()]);
             unset($this->plugin->players[$clone->getNameTag()]);
+        }
+        if(isset($this->plugin->mounts[$player->getName()])) {
+            $this->plugin->mounts[$player->getName()]->close();
+            unset($this->plugin->mounts[$player->getName()]);
         }
     }
 
@@ -63,6 +68,13 @@ class EventListener implements Listener {
             $event->cancel();
         }
     }
+
+    /*public function onToggleSwim(PlayerToggleSwimEvent $event) : void {
+        if (!$event->isSwimming()) {
+            // Le joueur essaie d'arrêter de nager → on cancel
+            $event->cancel();
+        }
+    }*/
 
     public function onPlayerMove(PlayerMoveEvent $event): void {
         $player = $event->getPlayer();

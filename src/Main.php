@@ -19,6 +19,8 @@ use pocketmine\entity\attribute\Attribute;
 use pocketmine\entity\EntityDataHelper;
 use pocketmine\entity\Skin;
 use pocketmine\item\VanillaItems;
+use pocketmine\network\mcpe\protocol\SetActorLinkPacket;
+use pocketmine\network\mcpe\protocol\types\entity\EntityLink;
 
 class Main extends PluginBase{
 
@@ -27,6 +29,9 @@ class Main extends PluginBase{
 
     //player of each clone
     public array $players = [];
+
+    //mount (armor stand) ridden by each player
+    public array $mounts = [];
 
     public function onEnable() : void{
         EntityFactory::getInstance()->register(
@@ -45,6 +50,10 @@ class Main extends PluginBase{
             },
             ['CloneEntity']
         );
+
+        EntityFactory::getInstance()->register(MountEntity::class, function(\pocketmine\world\World $world, \pocketmine\nbt\tag\CompoundTag $nbt) : MountEntity {
+            return new MountEntity(EntityDataHelper::parseLocation($nbt, $world), $nbt);
+        }, ['MountEntity']);
 
         $this->getServer()->getPluginManager()->registerEvents(new EventListener($this), $this);
         $this->getLogger()->info("Resize plugin enabled!");
@@ -82,6 +91,10 @@ class Main extends PluginBase{
                 unset($this->clones[$player->getName()]);
                 unset($this->players[$oldClone->getNameTag()]);
             }
+            if(isset($this->mounts[$player->getName()])){
+                $this->mounts[$player->getName()]->close();
+                unset($this->mounts[$player->getName()]);
+            }
 
             $location = $player->getLocation();
             $clone = new CloneEntity(
@@ -100,17 +113,39 @@ class Main extends PluginBase{
             $cloneName = $clone->getNameTag();
             $this->players[$cloneName] = $player;
 
-            $posX = $clone->getPosition()->x;
-            $posY = $clone->getEyePos()->y - 1.62;
-            $posZ = $clone->getPosition()->z;
-
             $player->setHasBlockCollision(false);
             $clone->getInventory()->setItemInHand(VanillaItems::DIAMOND_SWORD());
             $player->setInvisible(true);
             $player->setMovementSpeed($scale * $scale * $scale);
-            $player->setScale(0.01);
             $this->setArmorAndItemClone($clone, $player);
-            $player->teleport(new Vector3($posX, $posY, $posZ));
+
+            // Spawn l'ArmorStand invisible a la position des yeux du clone
+            $mountY = $clone->getPosition()->y + $clone->getEyeHeight() - 1.62;
+            $mountLocation = new Location(
+                $clone->getPosition()->x,
+                $mountY,
+                $clone->getPosition()->z,
+                $clone->getWorld(),
+                0.0,
+                0.0
+            );
+            $mount = new MountEntity($mountLocation, null);
+            $mount->setHasGravity(false);
+            $mount->setInvisible(true);
+            $mount->spawnTo($player);
+            $this->mounts[$name] = $mount;
+
+            // Faire rider le joueur dessus
+            $pk = new SetActorLinkPacket();
+            $pk->link = new EntityLink(
+                $mount->getId(),   // fromActorUniqueId (vehicle)
+                $player->getId(),  // toActorUniqueId (rider)
+                EntityLink::TYPE_RIDER,
+                true,              // immediate
+                true,              // causedByRider
+                0.0                // vehicleAngularVelocity
+            );
+            $player->getNetworkSession()->sendDataPacket($pk);
     }
 
     public function backToNormal(Player $player) : void{
@@ -127,6 +162,21 @@ class Main extends PluginBase{
             $player->setInvisible(false);
             $player->setScale(1.0);
             $player->setMovementSpeed(0.1);
+
+            if(isset($this->mounts[$player->getName()])){
+                $pk = new SetActorLinkPacket();
+                $pk->link = new EntityLink(
+                    $this->mounts[$player->getName()]->getId(),
+                    $player->getId(),
+                    EntityLink::TYPE_REMOVE,
+                    true,
+                    false,
+                    0.0
+                );
+                $player->getNetworkSession()->sendDataPacket($pk);
+                $this->mounts[$player->getName()]->close();
+                unset($this->mounts[$player->getName()]);
+            }
     }
 
     public function setArmorAndItemClone(CloneEntity $clone, Player $player): void {
