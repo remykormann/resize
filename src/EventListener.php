@@ -62,6 +62,11 @@ class EventListener implements Listener {
         if($entity instanceof CloneEntity){
             if(!isset($this->plugin->players[$entity->getNameTag()])) return;
             $player = $this->plugin->players[$entity->getNameTag()];
+            // Si c'est le proprio qui frappe son propre clone, on annule sans transferer
+            if($event instanceof EntityDamageByEntityEvent && $event->getDamager() === $player){
+                $event->cancel();
+                return;
+            }
             $damageEvent = new EntityDamageEvent($player, $event->getCause(), $event->getFinalDamage());
             $damageEvent->doApply = true;
             $player->attack($damageEvent);
